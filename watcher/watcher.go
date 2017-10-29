@@ -1,13 +1,7 @@
 package watcher
 
 import (
-	"fmt"
-	"io/ioutil"
-
-	"golang.org/x/net/context"
-	"golang.org/x/oauth2/google"
 	gmail "google.golang.org/api/gmail/v1"
-	//"github.com/keo-git/ooyodo-bot/config"
 )
 
 type GmailWatcher struct {
@@ -19,20 +13,16 @@ type GmailWatcher struct {
 }
 
 func NewGmailWatcher(secret, token, sub, userId string) (*GmailWatcher, error) {
-	ctx := context.Background()
-
-	b, err := ioutil.ReadFile(secret)
+	client, err := getClient(secret, token)
 	if err != nil {
 		return nil, err
 	}
-
-	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope)
-	if err != nil {
-		return nil, err
-	}
-
-	client := getClient(ctx, config, token)
 	srv, err := gmail.New(client)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := NewSubscription(srv, userId, sub)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +30,7 @@ func NewGmailWatcher(secret, token, sub, userId string) (*GmailWatcher, error) {
 	return &GmailWatcher{
 		userId: userId,
 		srv:    srv,
-		sub:    NewSubscription(srv, userId, sub),
+		sub:    s,
 		nq:     NewNotificationQueue(),
 	}, nil
 }
@@ -55,7 +45,6 @@ func (gw *GmailWatcher) Update() error {
 
 	hisResp, err := gw.srv.Users.History.List(gw.userId).StartHistoryId(gw.sub.HistoryId).Do()
 	if err != nil {
-		fmt.Println("history")
 		return err
 	}
 

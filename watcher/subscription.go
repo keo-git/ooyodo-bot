@@ -15,14 +15,16 @@ type subscription struct {
 	HistoryId  uint64 `json:"history_id"`
 }
 
-func NewSubscription(srv *gmail.Service, userId, file string) *subscription {
+func NewSubscription(srv *gmail.Service, userId, file string) (*subscription, error) {
 	s, err := subscriptionFromFile(file)
 	s.file = file
 	if err != nil || s.IsExpired() {
-		s.Subscribe(srv, userId)
+		if err = s.Subscribe(srv, userId); err != nil {
+			return nil, err
+		}
 		s.Save()
 	}
-	return s
+	return s, nil
 }
 
 func (s *subscription) Subscribe(srv *gmail.Service, userId string) error {
