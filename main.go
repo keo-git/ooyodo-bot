@@ -24,7 +24,7 @@ func sigHandler(c chan os.Signal, ooyodo *ooyodobot.Ooyodo) {
 	}
 }
 
-var file = flag.String("config", "ooyodo-bot.json", "path to config file")
+var file = flag.String("config", "", "path to config file")
 
 func init() {
 
@@ -54,11 +54,15 @@ func main() {
 	//defer ooyodo.Close()
 
 	for {
-		ooyodo.Update()
+		err = ooyodo.Update()
+		if err != nil {
+			log.Printf("Unable to update: %v", err)
+			continue
+		}
 		notifications := ooyodo.GetNotifications()
-		for _, notification := range notifications {
-			fmt.Println(notification.GetMsgText())
-			//ooyodo.Notify(notification)
+		for _, n := range notifications {
+			fmt.Println(n.MsgText)
+			ooyodo.Notify(*n)
 		}
 	}
 }

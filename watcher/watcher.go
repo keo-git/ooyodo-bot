@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"golang.org/x/net/context"
@@ -54,53 +55,43 @@ func (gw *GmailWatcher) Update() error {
 
 	hisResp, err := gw.srv.Users.History.List(gw.userId).StartHistoryId(gw.sub.HistoryId).Do()
 	if err != nil {
+		fmt.Println("history")
 		return err
 	}
 
 	for _, history := range hisResp.History {
 		for _, newMessage := range history.MessagesAdded {
-			msg, err := gw.srv.Users.Messages.Get(gw.userId, newMessage.Message.Id).Do()
-			if err != nil {
-				return err
-			}
-			if isInbox(msg) {
+			if isInbox(newMessage.Message) {
+				msg, err := gw.srv.Users.Messages.Get(gw.userId, newMessage.Message.Id).Do()
+				if err != nil {
+					return err
+				}
+
+				headers := getMessageHeaders(msg, "Date", "From", "To", "Subject")
+				body := getMessageBodyText(msg)
+				attachments := getMessageAttachments(msg, gw.srv, gw.userId, msg.Id)
+
+				n := NewNotification(headers, body, attachments)
+				gw.nq.Push(n)
+
 				if msg.HistoryId > gw.sub.HistoryId {
 					gw.sub.HistoryId = msg.HistoryId
 					gw.sub.Save()
 				}
-				gw.nq.Push(*msg)
 			}
 		}
 	}
-	//gw.sub.HistoryId = hisResp.HistoryId
-	//gw.sub.Save()
 	return nil
 }
 
-func (gw *GmailWatcher) GetNotification() *notification {
+func (gw *GmailWatcher) GetNotification() *Notification {
 	return gw.nq.Pop()
 }
 
-func (gw *GmailWatcher) GetNotifications() []*notification {
-	var ns []*notification
+func (gw *GmailWatcher) GetNotifications() []*Notification {
+	var ns []*Notification
 	for !gw.nq.IsEmpty() {
 		ns = append(ns, gw.GetNotification())
 	}
 	return ns
 }
-
-func isInbox(msg *gmail.Message) bool {
-	for _, label := range msg.LabelIds {
-		if label == "INBOX" {
-			return true
-		}
-	}
-	return false
-}
-
-/*func (gw *GmailWatcher) Close() {
-	conf := config.Config()
-	conf.Expiration = gw.expiration
-	conf.HistoryId = gw.historyId
-	conf.Close()
-}*/

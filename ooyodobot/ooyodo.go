@@ -24,7 +24,11 @@ func NewOoyodo(gmailSecret, gmailToken, sub, userId, telToken string, chatId int
 	return &Ooyodo{w, api, chatId}, err
 }
 
-func (ooyodo *Ooyodo) Notify(notification string) {
-	telMsg := tgbotapi.NewMessage(ooyodo.chatId, notification)
+func (ooyodo *Ooyodo) Notify(n watcher.Notification) {
+	telMsg := tgbotapi.NewMessage(ooyodo.chatId, n.MsgText)
 	ooyodo.api.Send(telMsg)
+	for _, msgFile := range n.MsgFiles {
+		docUpload := tgbotapi.NewDocumentUpload(ooyodo.chatId, msgFile)
+		ooyodo.api.Send(docUpload)
+	}
 }
