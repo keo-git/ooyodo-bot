@@ -3,7 +3,6 @@ package ooyodobot
 import (
 	"log"
 
-	"github.com/keo-git/ooyodo-bot/config"
 	"github.com/keo-git/ooyodo-bot/watcher"
 	"gopkg.in/telegram-bot-api.v4"
 )
@@ -14,18 +13,18 @@ type Ooyodo struct {
 	chatId int64
 }
 
-func NewOoyodo() *Ooyodo {
-	conf := config.Config()
-	api, err := tgbotapi.NewBotAPI(conf.TelegramToken)
+func NewOoyodo(gmailSecret, gmailToken, sub, userId, telToken string, chatId int64) (*Ooyodo, error) {
+	api, err := tgbotapi.NewBotAPI(telToken)
 	if err != nil {
-		log.Fatalf("Unable to initialize bot API: %v", err)
+		return nil, err
 	}
 	log.Printf("Authorized on account %s\n", api.Self.UserName)
 
-	return &Ooyodo{watcher.NewGmailWatcher(), api, conf.ChatId}
+	w, err := watcher.NewGmailWatcher(gmailSecret, gmailToken, sub, userId)
+	return &Ooyodo{w, api, chatId}, err
 }
 
-func (ooyodo *Ooyodo) SendNotification(notification string) {
+func (ooyodo *Ooyodo) Notify(notification string) {
 	telMsg := tgbotapi.NewMessage(ooyodo.chatId, notification)
 	ooyodo.api.Send(telMsg)
 }

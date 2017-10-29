@@ -4,7 +4,40 @@ import (
 	gmail "google.golang.org/api/gmail/v1"
 )
 
-func newMultiString(args ...string) string {
+//msgText in format
+//Date
+//From: sender@email1.com
+//To : receiver@email2.com
+//Subject
+//Body
+type notification struct {
+	msgText string
+	//msgFiles ???
+}
+
+func NewNotification(msg gmail.Message) *notification {
+	var date, from, to, subject, body string
+	for _, header := range msg.Payload.Headers {
+		switch header.Name {
+		case "Date":
+			date = header.Value
+		case "From":
+			from = header.Value
+		case "To":
+			to = header.Value
+		case "Subject":
+			subject = header.Value
+		}
+	}
+	msgText := multiString(date, "From: "+from, "To: "+to, "Subject: "+subject, body)
+	return &notification{msgText}
+}
+
+func (n notification) GetMsgText() string {
+	return n.msgText
+}
+
+func multiString(args ...string) string {
 	var ms string
 	for _, s := range args {
 		ms += s + "\n"
@@ -13,35 +46,25 @@ func newMultiString(args ...string) string {
 }
 
 type NotificationQueue struct {
-	notifications []string
+	notifications []*notification
 }
 
 func NewNotificationQueue() *NotificationQueue {
 	return &NotificationQueue{}
 }
 
-func (n *NotificationQueue) Add(msg gmail.Message) {
-
-	var date, from string
-	for _, header := range msg.Payload.Headers {
-		switch header.Name {
-		case "Date":
-			date = header.Value
-		case "From":
-			from = header.Value
-		}
-	}
-	newNotif := newMultiString(date, from, msg.Snippet)
-	n.notifications = append(n.notifications, newNotif)
+func (nq *NotificationQueue) Push(msg gmail.Message) {
+	n := NewNotification(msg)
+	nq.notifications = append(nq.notifications, n)
 }
 
-func (n *NotificationQueue) Get() string {
-	if n.IsEmpty() {
-		return ""
+func (nq *NotificationQueue) Pop() *notification {
+	if nq.IsEmpty() {
+		return nil
 	}
-	message := n.notifications[0]
-	n.notifications = n.notifications[1:]
-	return message
+	n := nq.notifications[0]
+	nq.notifications = nq.notifications[1:]
+	return n
 }
 
 func (n NotificationQueue) IsEmpty() bool {

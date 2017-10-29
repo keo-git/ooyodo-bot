@@ -7,24 +7,17 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/keo-git/ooyodo-bot/config"
-	"github.com/keo-git/ooyodo-bot/utils"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 )
 
-func getClient(ctx context.Context, oauthConfig *oauth2.Config) *http.Client {
-	conf := config.Config()
-	tokenFile, err := utils.AbsolutePath(conf.Credentials, conf.GmailToken)
+func getClient(ctx context.Context, oauthConfig *oauth2.Config, token string) *http.Client {
+	t, err := tokenFromFile(token)
 	if err != nil {
-		log.Fatalf("Unable to get path to token file: %v", err)
+		t = tokenFromWeb(oauthConfig)
+		saveToken(token, t)
 	}
-	tok, err := tokenFromFile(tokenFile)
-	if err != nil {
-		tok = tokenFromWeb(oauthConfig)
-		saveToken(tokenFile, tok)
-	}
-	return oauthConfig.Client(ctx, tok)
+	return oauthConfig.Client(ctx, t)
 }
 
 func tokenFromFile(file string) (*oauth2.Token, error) {
