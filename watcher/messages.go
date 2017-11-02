@@ -26,9 +26,9 @@ func getMessageBodyText(msg *gmail.Message) string {
 	bodyPart := msg.Payload.Parts[0]
 	switch bodyPart.MimeType {
 	case "text/plain":
-		bodyBytes, _ = base64.StdEncoding.DecodeString(bodyPart.Body.Data)
+		bodyBytes, _ = base64.URLEncoding.DecodeString(bodyPart.Body.Data)
 	case "multipart/alternative":
-		bodyBytes, _ = base64.StdEncoding.DecodeString(bodyPart.Parts[0].Body.Data)
+		bodyBytes, _ = base64.URLEncoding.DecodeString(bodyPart.Parts[0].Body.Data)
 	}
 	return string(bodyBytes[:len(bodyBytes)])
 }
