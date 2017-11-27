@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"os/signal"
 	"path/filepath"
 
 	"github.com/keo-git/ooyodo-bot/config"
 	"github.com/keo-git/ooyodo-bot/ooyodobot"
-	"github.com/keo-git/ooyodo-bot/utils"
 )
 
 var file = flag.String("config", "", "path to config file")
@@ -29,22 +30,12 @@ func main() {
 		log.Fatalf("Unable to create Ooyodo instance: %v", err)
 	}
 
-	c := make(chan interface{}, 1)
-	go utils.Log(c)
-	go utils.Ping()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
 
-	for {
-		err = ooyodo.Update()
-		if err != nil {
-			c <- err
-			continue
-		}
-		notifications := ooyodo.GetNotifications()
-		if len(notifications) > 0 {
-			c <- len(notifications)
-		}
-		for _, n := range notifications {
-			ooyodo.Notify(*n)
-		}
+	ooyodo.Start()
+	for range c {
+		ooyodo.Stop()
+		close(c)
 	}
 }

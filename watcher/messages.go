@@ -3,8 +3,8 @@ package watcher
 import (
 	"encoding/base64"
 
+	"github.com/keo-git/go-bot/handler"
 	gmail "google.golang.org/api/gmail/v1"
-	"gopkg.in/telegram-bot-api.v4"
 )
 
 func getMessageHeaders(msg *gmail.Message, headers ...string) map[string]string {
@@ -33,8 +33,8 @@ func getMessageBodyText(msg *gmail.Message) string {
 	return string(bodyBytes[:len(bodyBytes)])
 }
 
-func getMessageAttachments(msg *gmail.Message, srv *gmail.Service, userId, msgId string) []tgbotapi.FileBytes {
-	var attachments []tgbotapi.FileBytes
+func getMessageAttachments(msg *gmail.Message, srv *gmail.Service, userId, msgId string) []handler.File {
+	var attachments []handler.File
 	parts := msg.Payload.Parts
 	if parts[0].MimeType == "multipart/alternative" {
 		for _, part := range parts[1:] {
@@ -43,7 +43,7 @@ func getMessageAttachments(msg *gmail.Message, srv *gmail.Service, userId, msgId
 			base64Bytes := []byte(attachment.Data)
 			attBytes := make([]byte, base64.URLEncoding.DecodedLen(len(base64Bytes)))
 			base64.URLEncoding.Decode(attBytes, base64Bytes)
-			attachments = append(attachments, tgbotapi.FileBytes{Name: part.Filename, Bytes: attBytes})
+			attachments = append(attachments, handler.File{Name: part.Filename, Bytes: attBytes})
 		}
 	}
 	return attachments

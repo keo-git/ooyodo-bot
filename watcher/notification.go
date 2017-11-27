@@ -1,7 +1,7 @@
 package watcher
 
 import (
-	"gopkg.in/telegram-bot-api.v4"
+	"github.com/keo-git/go-bot/handler"
 )
 
 //msgText in format
@@ -10,18 +10,22 @@ import (
 //To : receiver@email2.com
 //Subject: subject
 //Body
-type Notification struct {
+/*type Notification struct {
 	MsgText  string
 	MsgFiles []tgbotapi.FileBytes
-}
+}*/
 
-func NewNotification(headers map[string]string, body string, attachments []tgbotapi.FileBytes) *Notification {
+func NewNotification(headers map[string]string, body string, attachments []handler.File) *handler.Message {
 	date := headers["Date"]
 	from := headers["From"]
 	to := headers["To"]
 	subject := headers["Subject"]
-	msgText := multiString(date, "From: "+from, "To: "+to, "Subject: "+subject, body)
-	return &Notification{msgText, attachments}
+	msg := multiString(date, "From: "+from, "To: "+to, "Subject: "+subject, body)
+	return &handler.Message{
+		Msg:     msg,
+		Files:   attachments,
+		Channel: &handler.Channel{},
+	}
 }
 
 func multiString(args ...string) string {
@@ -32,7 +36,7 @@ func multiString(args ...string) string {
 	return ms
 }
 
-type NotificationQueue struct {
+/*type NotificationQueue struct {
 	notifications []*Notification
 }
 
@@ -58,4 +62,4 @@ func (n NotificationQueue) IsEmpty() bool {
 		return false
 	}
 	return true
-}
+}*/

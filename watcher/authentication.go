@@ -13,6 +13,30 @@ import (
 	gmail "google.golang.org/api/gmail/v1"
 )
 
+func GetToken(secret, token string) (string, error) {
+	//ctx := context.Background()
+
+	b, err := ioutil.ReadFile(secret)
+	if err != nil {
+		return "", err
+	}
+
+	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope)
+	if err != nil {
+		return "", err
+	}
+
+	t, err := tokenFromFile(token)
+	if err != nil {
+		t, err = tokenFromWeb(config)
+		if err != nil {
+			return "", err
+		}
+		saveToken(token, t)
+	}
+	return t.AccessToken, nil
+}
+
 func getClient(secret, token string) (*http.Client, error) {
 	ctx := context.Background()
 

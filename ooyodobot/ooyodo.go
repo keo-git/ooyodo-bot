@@ -1,34 +1,65 @@
 package ooyodobot
 
 import (
-	"log"
-
+	"github.com/keo-git/go-bot/bot"
+	"github.com/keo-git/go-bot/handler"
+	"github.com/keo-git/go-bot/handler/telegram"
 	"github.com/keo-git/ooyodo-bot/watcher"
-	"gopkg.in/telegram-bot-api.v4"
 )
 
 type Ooyodo struct {
+	*bot.Bot
 	*watcher.GmailWatcher
-	api    *tgbotapi.BotAPI
-	chatId int64
+	updates chan *handler.Message
+	errc    chan error
+	done    chan struct{}
+	chatId  int64
 }
 
 func NewOoyodo(gmailSecret, gmailToken, sub, userId, telToken string, chatId int64) (*Ooyodo, error) {
-	api, err := tgbotapi.NewBotAPI(telToken)
+	tel, err := telegram.NewTelegramHandler(telToken)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Authorized on account %s\n", api.Self.UserName)
 
 	w, err := watcher.NewGmailWatcher(gmailSecret, gmailToken, sub, userId)
-	return &Ooyodo{w, api, chatId}, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &Ooyodo{
+		Bot:          bot.NewBot(tel),
+		GmailWatcher: w,
+		updates:      make(chan *handler.Message),
+		errc:         make(chan error),
+		done:         make(chan struct{}),
+		chatId:       chatId,
+	}, nil
 }
 
-func (ooyodo *Ooyodo) Notify(n watcher.Notification) {
-	telMsg := tgbotapi.NewMessage(ooyodo.chatId, n.MsgText)
-	ooyodo.api.Send(telMsg)
-	for _, msgFile := range n.MsgFiles {
-		docUpload := tgbotapi.NewDocumentUpload(ooyodo.chatId, msgFile)
-		ooyodo.api.Send(docUpload)
+func (o Ooyodo) Start() {
+	go o.Bot.Start()
+	go o.GmailWatcher.Start(o.updates, o.errc)
+	go o.notify()
+}
+
+func (o Ooyodo) Stop() {
+	o.done <- struct{}{}
+}
+
+func (o Ooyodo) notify() {
+	for {
+		select {
+		case update := <-o.updates:
+			update.Channel.Id = o.chatId
+			go o.Send(update)
+		case <-o.done:
+			o.Bot.Close()
+			o.GmailWatcher.Stop()
+			close(o.errc)
+			return
+			//case err := <-o.errc:
+
+		}
 	}
 }
