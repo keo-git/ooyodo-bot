@@ -3,8 +3,8 @@ package watcher
 import (
 	"encoding/base64"
 
-	"github.com/keo-git/go-bot/handler"
 	gmail "google.golang.org/api/gmail/v1"
+	"gopkg.in/telegram-bot-api.v4"
 )
 
 func getMessageHeaders(msg *gmail.Message, headers ...string) map[string]string {
@@ -33,17 +33,16 @@ func getMessageBodyText(msg *gmail.Message) string {
 	return string(bodyBytes[:len(bodyBytes)])
 }
 
-func getMessageAttachments(msg *gmail.Message, srv *gmail.Service, userId, msgId string) []handler.File {
-	var attachments []handler.File
+func getMessageAttachments(msg *gmail.Message, srv *gmail.Service, userID, msgID string) (attachments []tgbotapi.FileBytes) {
 	parts := msg.Payload.Parts
 	if parts[0].MimeType == "multipart/alternative" {
 		for _, part := range parts[1:] {
 			id := part.Body.AttachmentId
-			attachment, _ := srv.Users.Messages.Attachments.Get(userId, msgId, id).Do()
+			attachment, _ := srv.Users.Messages.Attachments.Get(userID, msgID, id).Do()
 			base64Bytes := []byte(attachment.Data)
 			attBytes := make([]byte, base64.URLEncoding.DecodedLen(len(base64Bytes)))
 			base64.URLEncoding.Decode(attBytes, base64Bytes)
-			attachments = append(attachments, handler.File{Name: part.Filename, Bytes: attBytes})
+			attachments = append(attachments, tgbotapi.FileBytes{Name: part.Filename, Bytes: attBytes})
 		}
 	}
 	return attachments

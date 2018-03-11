@@ -1,44 +1,43 @@
 package ooyodobot
 
 import (
-	"github.com/keo-git/go-bot/bot"
-	"github.com/keo-git/go-bot/handler"
-	"github.com/keo-git/go-bot/handler/telegram"
-	"github.com/keo-git/ooyodo-bot/watcher"
+	"github.com/svarw/ooyodo-bot/bot/handler"
+	"github.com/svarw/ooyodo-bot/config"
+	"github.com/svarw/ooyodo-bot/watcher"
 )
 
 type Ooyodo struct {
-	*bot.Bot
 	*watcher.GmailWatcher
-	updates chan *handler.Message
+	*bot.Handler
+	updates chan *bot.Message
 	errc    chan error
 	done    chan struct{}
-	chatId  int64
+	chatID  int64
 }
 
-func NewOoyodo(gmailSecret, gmailToken, sub, userId, telToken string, chatId int64) (*Ooyodo, error) {
-	tel, err := telegram.NewTelegramHandler(telToken)
+func NewOoyodo(c config.Config) (*Ooyodo, error) {
+	h, err := bot.NewHandler(c.TelegramToken)
 	if err != nil {
 		return nil, err
 	}
 
-	w, err := watcher.NewGmailWatcher(gmailSecret, gmailToken, sub, userId)
+	w, err := watcher.NewGmailWatcher(c.GmailSecret, c.GmailToken, c.Subscription, c.UserID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Ooyodo{
-		Bot:          bot.NewBot(tel),
+		//Bot:          bot.NewBot(tel),
 		GmailWatcher: w,
-		updates:      make(chan *handler.Message),
+		Handler:      h,
+		updates:      make(chan *bot.Message),
 		errc:         make(chan error),
 		done:         make(chan struct{}),
-		chatId:       chatId,
+		chatID:       c.ChatID,
 	}, nil
 }
 
 func (o Ooyodo) Start() {
-	go o.Bot.Start()
 	go o.GmailWatcher.Start(o.updates, o.errc)
 	go o.notify()
 }
@@ -51,15 +50,13 @@ func (o Ooyodo) notify() {
 	for {
 		select {
 		case update := <-o.updates:
-			update.Channel.Id = o.chatId
-			go o.Send(update)
+			update.Channel = o.chatID
+			go o.Send(*update, o.errc)
 		case <-o.done:
-			o.Bot.Close()
 			o.GmailWatcher.Stop()
 			close(o.errc)
 			return
 			//case err := <-o.errc:
-
 		}
 	}
 }

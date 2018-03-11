@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/keo-git/ooyodo-bot/utils"
+	"github.com/svarw/ooyodo-bot/utils"
 	gmail "google.golang.org/api/gmail/v1"
 )
 

@@ -7,25 +7,24 @@ import (
 	"os/signal"
 	"path/filepath"
 
-	"github.com/keo-git/ooyodo-bot/config"
-	"github.com/keo-git/ooyodo-bot/ooyodobot"
+	"github.com/svarw/ooyodo-bot/bot"
+	"github.com/svarw/ooyodo-bot/config"
 )
 
 var file = flag.String("config", "", "path to config file")
 
 func main() {
-	log.Println("Starting Ooyodo routine...")
+	log.Println("Starting Ooyodo...")
 	flag.Parse()
 	abs, err := filepath.Abs(*file)
 	if err != nil {
 		log.Fatalf("Unable to open config file: %v", err)
 	}
-	conf, err := config.Config(abs)
+	conf, err := config.NewConfig(abs)
 	if err != nil {
 		log.Fatalf("Unable to create config instance: %v", err)
 	}
-	ooyodo, err := ooyodobot.NewOoyodo(conf.GmailSecret, conf.GmailToken,
-		conf.Subscription, conf.UserId, conf.TelegramToken, conf.ChatId)
+	ooyodo, err := ooyodobot.NewOoyodo(*conf)
 	if err != nil {
 		log.Fatalf("Unable to create Ooyodo instance: %v", err)
 	}

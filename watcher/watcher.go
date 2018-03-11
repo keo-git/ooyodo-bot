@@ -3,7 +3,7 @@ package watcher
 import (
 	"time"
 
-	"github.com/keo-git/go-bot/handler"
+	"github.com/svarw/ooyodo-bot/bot/handler"
 	gmail "google.golang.org/api/gmail/v1"
 )
 
@@ -39,8 +39,8 @@ func NewGmailWatcher(secret, token, sub, userId string) (*GmailWatcher, error) {
 	}, nil
 }
 
-func (gw *GmailWatcher) Start(updates chan<- *handler.Message, errc chan<- error) {
-	ticker := time.NewTicker(time.Second)
+func (gw *GmailWatcher) Start(updates chan<- *bot.Message, errc chan<- error) {
+	ticker := time.NewTicker(15 * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
